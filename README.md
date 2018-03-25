@@ -1,5 +1,5 @@
 
-`minilexer`: A Simple Lexer in R
+*minilexer*: A Simple Lexer in R
 ==============================================================================
 
 
@@ -64,34 +64,7 @@ lex(sentence, sentence_patterns)
 ##        "."
 ```
 
-Example: Lex an SVG `points` attribute into tokens
------------------------------------------------------------------------------
 
-* The SVG `points` attribute is a single string containing numbers, spaces and commas
-* SVG is very forgiving on whitespace and leading zeros, so the following are all valid pairs of numbers
-    * `0.2,0.3`
-    * `.2.3` 
-    * `.2-.3`
-
-
-```r
-svg_points_patterns <- c(
-  number      = "-?\\d*\\.?\\d+",
-  whitespace  = "\\s+",
-  sep         = ","
-)
-
-svg_points <- "1-2 3-4,.5.3"
-
-lex(svg_points, svg_points_patterns)  
-```
-
-```
-##     number     number whitespace     number     number        sep 
-##        "1"       "-2"        " "        "3"       "-4"        "," 
-##     number     number 
-##       ".5"       ".3"
-```
 
 
 Example: Lex some simplified R code into tokens
