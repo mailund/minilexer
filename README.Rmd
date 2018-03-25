@@ -1,7 +1,7 @@
----
-title: "`minilexer`: A Simple Lexer in R"
-output: html_document
----
+
+`minilexer`: A Simple Lexer in R
+==============================================================================
+
 
 ```{r setup, include=FALSE}
 suppressPackageStartupMessages({
