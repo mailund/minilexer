@@ -6,9 +6,11 @@
 
 
 
-`minilexer` provides some tools for simple tokenising/lexing and parsing text files.
+`minilexer` provides some tools for simple tokenising/lexing and parsing text files.  
 
-Note: For complicated parsing (especially of computer programs) you'll probably want to use the more formally correct lexing/parsing provided by [the `rly` package on CRAN](https://cran.r-project.org/package=rly).
+`minilexer` aims to be great at helping you get obscure data into R *fast*. 
+
+For complicated parsing (especially of computer programs) you'll want to use the more formally correct lexing/parsing provided by the [`rly` package](https://cran.r-project.org/package=rly) or the [`dparser` package](https://cran.r-project.org/package=dparser).
 
 Installation
 -----------------------------------------------------------------------------
@@ -22,26 +24,64 @@ devtools::install_bitbucket('coolbutuseless/minilexer')
 Package Overview
 -----------------------------------------------------------------------------
 
-Current there is just one function provided: `minilexer::lex(text, patterns)`.
 
-This function uses the user-defined regular expressions (`patterns`) to split 
-`text` into a character vector of tokens.
+Current the package provides just one function and one R6 class: 
 
-The `patterns` argument is a named vector of character strings representing regular
-expressions for elements to match within the text.  
+* `minilexer::lex(text, patterns)` for splitting the text into tokens.
+    * This function uses the user-defined regular expressions (`patterns`) to split 
+      `text` into a character vector of tokens.
+    * The `patterns` argument is a named vector of character strings representing regular
+      expressions for elements to match within the text.  
+* `minilexer::TokenStream` is a class to handle manipulation/interrogation of the stream of tokens to
+  make it easier to write parsers.
 
 
 ToDo
 -----------------------------------------------------------------------------
 
-* Add some parsing helpers
 * Add vignettes for parsing some data formats, e.g.
     * chess games `.pgn`
     * scrabble games `.gcg`
 
 
 
-Example: Lex a sentence into tokens
+Introducing the `minilexer` package
+-----------------------------------------------------------------------------
+
+`minilexer` provides some tools for simple tokenising/lexing and parsing text files.
+
+I will emphasise the **mini** in `minilexer` as this is not a rigorous or formally complete lexer, but it
+suits 99% of my needs for data parsing.  The harder bit comes with trying to parse it into a sensible data structure I can 
+manipulate.
+
+For complicated parsing (especially of computer programs) you'll probably want to use the more formally correct lexing/parsing provided by the [`rly` package](https://cran.r-project.org/package=rly) or the [`dparser` package](https://cran.r-project.org/package=dparser).
+
+
+
+Installation
+-----------------------------------------------------------------------------
+
+```r
+devtools::install_bitbucket('coolbutuseless/minilexer')
+```
+
+
+
+Package Overview
+-----------------------------------------------------------------------------
+
+Current the package provides just one function and one R6 class: 
+
+* `minilexer::lex(text, patterns)` for splitting the text into tokens.
+    * This function uses the user-defined regular expressions (`patterns`) to split 
+      `text` into a character vector of tokens.
+    * The `patterns` argument is a named vector of character strings representing regular
+      expressions for elements to match within the text.  
+* `minilexer::TokenStream` is a class to handle manipulation/interrogation of the stream of tokens to
+  make it easier to write parsers.
+
+
+Example: Use `lex()` to split sentence into tokens
 -----------------------------------------------------------------------------
 
 ```r
@@ -66,8 +106,7 @@ lex(sentence, sentence_patterns)
 
 
 
-
-Example: Lex some simplified R code into tokens
+Example: Use `lex()` to split some simplified R code into tokens
 -----------------------------------------------------------------------------
 
 
@@ -86,7 +125,8 @@ R_patterns <- c(
 
 R_code <- "x <- 3 + 4.2 + rnorm(1)"
 
-lex(R_code, R_patterns)
+R_tokens <- lex(R_code, R_patterns)
+R_tokens
 ```
 
 ```
@@ -97,5 +137,116 @@ lex(R_code, R_patterns)
 ##       name   lbracket     number   rbracket 
 ##    "rnorm"        "("        "1"        ")"
 ```
+
+
+Example: Use `TokenStream` to interrogate/manipulate the tokens 
+-----------------------------------------------------------------------------
+
+The `TokenStream` class is a way of manipulating a stream of tokens to make it 
+easier(*) to write parsers.  It is a way of keeping track of which token we are 
+currently looking at, and making assertions about the current token's value and type.
+
+
+
+```r
+# create the stream to handle the tokens
+stream <- minilexer::TokenStream$new(R_tokens)
+
+# What position are we at?
+stream$position
+```
+
+```
+## [1] 1
+```
+
+```r
+# Assert that the first token is a name and has the value 'x'
+stream$expect_value('x')
+stream$expect_type('name')
+
+# Show what happens if the current token isn't what we expect
+stream$expect_value('+')
+```
+
+```
+## Error: Expected [+] at position 1 but found [name]: "x"
+```
+
+```r
+# Try and consume this token and move onto the next one, but
+# because the 'type' is incorrect, will result in failure
+stream$consume_token(type='number')
+```
+
+```
+## Error: Expected [number] at position 1 but found [name]: "x"
+```
+
+```r
+# Unconditionally consume this token without regard to 
+# its value or type. This returns the value at the 
+# current position, and then increments the position
+stream$consume_token()
+```
+
+```
+## [1] "x"
+```
+
+```r
+# Stream position should have moved on to the second value
+stream$position
+```
+
+```
+## [1] 2
+```
+
+```r
+# Get the current value, but without advancing the position
+stream$current_value()
+```
+
+```
+## [1] " "
+```
+
+```r
+# consume it. i.e. return current value and increment position
+stream$consume_token(type='whitespace')
+```
+
+```
+## [1] " "
+```
+
+```r
+# Stream position should have moved on to the third value
+stream$position
+```
+
+```
+## [1] 3
+```
+
+```r
+# Get the current value
+stream$current_value()
+```
+
+```
+## [1] "<-"
+```
+
+```r
+stream$current_type()
+```
+
+```
+## [1] "assign"
+```
+
+
 
 
