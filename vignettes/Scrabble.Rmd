@@ -1,0 +1,219 @@
+---
+title: "Parsing scrabble games in gcg format"
+author: "mikefc"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+suppressPackageStartupMessages({
+  library(magrittr)
+  library(dplyr)
+  library(minilexer)
+})
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+Scrabble game format: gcg
+------------------------------------------------------------------------------
+
+The [gcg file format](http://www.poslfit.com/scrabble/gcg/) is a human readable 
+representation of a Scrabble game.
+
+In its most basic form, it has comments up the top (preceded by the `#` character) and then
+the following rows represent a move by each player in turn.  
+
+An example gcg file is show below:
+
+```{r}
+gcg_text <- '
+#player1 Quackle Quackle Computer
+#player2 David David Boys
+#description Quackle Computer plays David Boys in Round 1 at the 2006 Human vs. Computer Showdown
+#title 2006 Human vs. Computer Showdown Round 1
+#incomplete
+>Quackle: DEMJNOT  8d   JETON           +40   40
+>David: ?EDYEIG   h2  rEDYEING        +64   64
+>Quackle: BEDGMNP  7e   BEDIM           +26   66  BE, ET, DO
+>David: HEALERS   j1  HEALERS         +75  139  BEDIMS
+>Quackle: DFGINPS   k3  DIF             +29   95  AD, LI, EF
+>David: COOAORS   l1  COOS            +28  167  ADO, LIS
+>Quackle: EGNOPRS   m3  SPONGER         +92  187  ADOS, LISP
+>David: AORWAVA  6c   AVOW            +37  204  OBE, WET
+>Quackle: AEFMOVZ  8l   MEZE            +54  241
+>David: AARTUNY   d8  JAUNTY          +32  236
+>Quackle: ACFIOOV  1l   COOF            +27  268
+>David: WALTIER  4c   WAILED          +20  256
+>Quackle: AACEINV  3a   VIA             +22  290  AW
+>David: IRUTRUT   a3  VIRTU            +9  265
+>Quackle: AACEHLN  8a   EH              +42  332  VIRTUE
+>David: QUBITUR  2b   BRUIT           +32  297  BI, RAW
+>Quackle: AACILNR  9m   RAN             +16  348  ZA, EN
+>David: PQUIEN? 13a   QUEY            +32  329
+>Quackle: CALLIER   c13 EL               +2  350
+>David: PINIR?N  1e   PIN             +11  340  PI, IT
+>Quackle: ACEILOR 15a   CALORIE         +83  433  ELL
+>David: TRAING? 14f   TRAdING         +67  407  TI, RE
+>David:               (DATSXK)        +36  443
+'
+```
+
+Use `lex()` to turn the text into tokens
+------------------------------------------------------------------------------
+
+1. Start by defining the regular expression patterns for each element in the gcg file.
+2. Use `minilexer::lex()` to turn the *gcg* text into tokens
+
+```{r}
+gcg_patterns <- c(
+  comment       = '(#.*?)\n',                 # Assume # only appears to denote comment to end of line
+  newline       = '\n',
+  whitespace    = '\\s+',
+  player        = '>(.*?):',                  # start of each line with a `>`
+  location      = '[a-o]\\d+|\\d+[a-o]|--|-', # Number first for horizontal words. -/-- for specials
+  number        = minilexer::pattern_number,
+  symbol        = '[-+\\w\\./\\?\\(\\)]+',
+  comma         = ","
+)
+
+tokens <- minilexer::lex(gcg_text, gcg_patterns)
+tokens <- tokens[!(names(tokens) %in% c('whitespace', 'newline', 'comment'))]
+tokens[1:23]
+```
+
+
+Use a `TokenStream` to help turn the tokens into data
+------------------------------------------------------------------------------
+
+Initialise a `TokenStream` object to help us manipulate/interrogate the list of tokens we have.
+
+```{r}
+stream <- TokenStream$new(tokens)
+```
+
+
+Write a function to parse a single event line
+------------------------------------------------------------------------------
+
+Parsing a line which has a scrabble event on it consists of the following steps:
+
+1. Check we are at the start of a line with a player's name.
+2. The next symbol represents their rack of scrabble tiles.
+3. The next symbol is a board location.
+4. The next symbol is the word they played.
+5. Don't bother extracting the scores - I'm not interested in them.
+5. Return a single-row data.frame containing that information.
+
+
+```{r}
+parse_event <- function() {
+  player_name <- stream$consume_token('player')
+  rack        <- stream$consume_token('symbol')
+  if (grepl("^\\(", rack)) {
+    # If the rack is surrounded by () it is the
+    # end-of-game rack for the other player.
+    # Not handling this.
+    return(NULL)
+  } else {
+    location <- stream$consume_token('location')
+    play     <- stream$consume_token('symbol')
+  }
+
+  data_frame(player=player_name, rack=rack, location=location, play=play)
+}
+```
+
+
+Write a parse loop to keep extracting events until we're done
+------------------------------------------------------------------------------
+
+1. For every line in the gcg file (after removing comments)
+2. Call `parse_event()`
+3. Stack all the events into a data.frame
+
+
+```{r}
+parse_gcg <- function() {
+  events <- NULL
+  
+  while(!is.na(stream$current_value())) {
+    if (stream$current_type() == 'player') {
+      event <- parse_event()
+      events <- rbind(events, event)
+    } else {
+      # silently skipping unhandled tokens
+      stream$consume_token()
+    }
+  }
+  
+  events 
+}
+
+events <- parse_gcg()
+```
+
+```{r}
+knitr::kable(events, caption="Scrabble game represented as a data.frame")
+```
+
+
+Manipulate the data
+------------------------------------------------------------------------------
+
+The whole point of parsing this data is to get it into a format that we can manipulate in R.
+
+1. Interpret the `location` field as x and y coordinates
+2. Add all the words to a game board
+3. Display the board somehow
+
+```{r}
+#-----------------------------------------------------------------------------
+# 1. Interpret the `location` field as x and y coordinates
+#-----------------------------------------------------------------------------
+events %<>% mutate(
+  horizontal = grepl("^\\d", location),
+  y          = as.integer(readr::parse_number(location)),
+  xc         = stringr::str_extract(location, "[a-o]"),
+  x          = charmatch(xc, letters)
+)
+```
+
+
+```{r}
+#-----------------------------------------------------------------------------
+# 2. Add all the words to a game board (represented by a 15x15 character matrix)
+#-----------------------------------------------------------------------------
+board <- matrix('.', nrow=15, ncol=15)
+
+add_word_to_board <- function(board, play, x, y, horizontal) {
+  if (horizontal) {
+    x <- seq(nchar(play)) + x - 1
+  } else {
+    y <- seq(nchar(play)) + y - 1
+  }
+
+  board[y, x] <- strsplit(play, '')[[1]]
+  board
+}
+
+for (i in seq(nrow(events))) {
+  event <- events[i,]
+  board <- add_word_to_board(board, event$play, event$x, event$y, event$horizontal)
+}
+```
+
+
+```{r}
+#-----------------------------------------------------------------------------
+# Print board
+#-----------------------------------------------------------------------------
+cat(paste(apply(board, 1, paste, collapse=' '), collapse="\n"))
+```

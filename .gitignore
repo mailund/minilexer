@@ -4,3 +4,4 @@
 *.Rproj
 *.swp
 README.html
+inst/doc

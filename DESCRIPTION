@@ -13,3 +13,9 @@ Imports:
   stringr,
   R6,
   glue
+Suggests: knitr,
+    rmarkdown,
+    readr,
+    dplyr,
+    magrittr
+VignetteBuilder: knitr
