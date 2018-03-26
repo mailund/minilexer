@@ -8,7 +8,7 @@
 
 `minilexer` provides some tools for simple tokenising/lexing and parsing text files.  
 
-`minilexer` aims to be great at helping you get obscure data into R *fast*. 
+`minilexer` aims to be great at helping to get unsupported text data formats into R *fast*. 
 
 For complicated parsing (especially of computer programs) you'll want to use the more formally correct lexing/parsing provided by the [`rly` package](https://cran.r-project.org/package=rly) or the [`dparser` package](https://cran.r-project.org/package=dparser).
 
@@ -25,7 +25,7 @@ Package Overview
 -----------------------------------------------------------------------------
 
 
-Current the package provides just one function and one R6 class: 
+Current the package provides one function, and one R6 class: 
 
 * `minilexer::lex(text, patterns)` for splitting the text into tokens.
     * This function uses the user-defined regular expressions (`patterns`) to split 
@@ -36,13 +36,6 @@ Current the package provides just one function and one R6 class:
   make it easier to write parsers.
 
 
-ToDo
------------------------------------------------------------------------------
-
-* Add vignettes for parsing some data formats, e.g.
-    * chess games `.pgn`
-    * scrabble games `.gcg`
-
 
 
 Introducing the `minilexer` package
@@ -51,8 +44,7 @@ Introducing the `minilexer` package
 `minilexer` provides some tools for simple tokenising/lexing and parsing text files.
 
 I will emphasise the **mini** in `minilexer` as this is not a rigorous or formally complete lexer, but it
-suits 99% of my needs for data parsing.  The harder bit comes with trying to parse it into a sensible data structure I can 
-manipulate.
+suits 90% of my needs for turning data text formats into tokens.
 
 For complicated parsing (especially of computer programs) you'll probably want to use the more formally correct lexing/parsing provided by the [`rly` package](https://cran.r-project.org/package=rly) or the [`dparser` package](https://cran.r-project.org/package=dparser).
 
@@ -145,6 +137,8 @@ Example: Use `TokenStream` to interrogate/manipulate the tokens
 The `TokenStream` class is a way of manipulating a stream of tokens to make it 
 easier(*) to write parsers.  It is a way of keeping track of which token we are 
 currently looking at, and making assertions about the current token's value and type.
+
+In the following examples, I'll be using the `R_tokens` I extracted above.
 
 
 
