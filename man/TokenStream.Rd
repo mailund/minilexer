@@ -3,12 +3,58 @@
 \docType{data}
 \name{TokenStream}
 \alias{TokenStream}
-\title{A class for manipulating/interrogating a stream of tokens}
-\format{An object of class \code{R6ClassGenerator} of length 24.}
+\title{An R6 class for manipulating/interrogating a stream of tokens}
+\format{\code{\link{R6Class}} object.}
 \usage{
 TokenStream
 }
 \description{
-A class for manipulating/interrogating a stream of tokens
+An R6 class for manipulating/interrogating a stream of tokens
 }
+\section{Usage}{
+
+\preformatted{stream = TokenStream$new(tokens)
+
+stream$current_value()
+
+}
+}
+
+\section{Arguments}{
+
+\code{tokens} The named character vector of tokens output by \code{lex()}
+}
+
+\section{Methods}{
+
+\code{$new()} Initialize a token stream with a vector of tokens.
+
+
+\code{$get_token_value(offset = 0)} Get the value of the token at the given
+     offset from the current position.
+
+\code{$get_token_type(offset = 0)} Get the type of the token at the given
+     offset from the current position.
+
+
+\code{$current_value()} Get the value of the token at the current position.
+
+\code{$current_type()} Get the type of the token at the current position.
+
+
+\code{$expect_value(value)} Check that the token at the current position has the
+      specified value. Silently return TRUE if it does, otherwise throw
+      an error.
+
+\code{$expect_type(type)} Check that the token at the current position has the
+      specified type. Silently return TRUE if it does, otherwise throw
+      an error.
+
+
+\code{$consume_token{type=NULL, value=NULL}} Return the token at the current
+     position and advance the stream to the next token. If \code{value} or
+     \code{type} are specified, then \code{expect_value()} or \code{expect_type()}
+     are called to verify the token before returning.
+}
+
 \keyword{datasets}

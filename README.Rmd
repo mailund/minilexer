@@ -83,7 +83,7 @@ sentence_patterns <- c(
   word        = "\\w+", 
   whitespace  = "\\s+",
   fullstop    = "\\.",
-  comma       = "\\,"
+  comma       = ","
 )
 
 sentence = "Hello there, Rstats."
