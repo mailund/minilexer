@@ -1,0 +1,314 @@
+---
+title: "Parsing 3d objects in OBJ format"
+author: "mikefc"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r setup, include=FALSE}
+suppressPackageStartupMessages({
+  library(magrittr)
+  library(dplyr)
+  library(tidyr)
+  library(glue)
+  library(rgl)
+  
+  library(minilexer)
+})
+
+rgl::setupKnitr()
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+
+Example parser: `obj` format for 3d objects
+------------------------------------------------------------------------------
+
+A simple text file to store 3d objects is the Wavefront **obj** format.  The filetype
+is well documented on the internet (e.g. 
+[1](https://en.wikipedia.org/wiki/Wavefront_.obj_file), 
+[2](http://paulbourke.net/dataformats/obj/), 
+[3](https://www.cs.cmu.edu/~mbz/personal/graphics/obj.html)), and an example octahedron object
+is show below which has 6 vertices and 8 faces.
+
+```{r}
+octahedron_obj <- '
+# OBJ file created by ply_to_obj.c
+#
+g Object001
+
+v  1  0  0
+v  0  -1  0
+v  -1  0  0
+v  0  1  0
+v  0  0  1
+v  0  0  -1
+
+f  2  1  5
+f  3  2  5
+f  4  3  5
+f  1  4  5
+f  1  2  6
+f  2  3  6
+f  3  4  6
+f  4  1  6
+'
+```
+
+
+The basic structure of a `.obj` file is:
+
+* Comments start with `#` and continue to the end of the line
+* There are symbols at the start of each line telling us what the data on the rest of the line represents, e.g.
+    * `v` means this line defines a vertex and will be followed by 3 numbers representing the x, y, z coordinates.
+    * `f` means this line defines a triangular face and the following 3 numbers indicate the 3 vertices which make up this face
+    * `vn` means this line defines a vector for the direction of the normal at a vertex
+* The format is more complicated than this, and I'm leaving out a lot of details, but this is enough to get the general idea.
+
+
+
+
+Use `lex()` to turn the text into tokens
+------------------------------------------------------------------------------
+
+1. Start by defining the regular expression patterns for each element in the *obj* file.
+2. Use `minilexer::lex()` to turn the *obj* text into tokens
+3. Throw away whitespace, newlines and comments, since I'm not interested in them.
+
+```{r}
+obj_patterns <- c(
+  comment    = '(#.*?)\n',  # assume comments take up the whole line
+  number     = pattern_number,  # This regex is defined in `minilex` and matches most numeric values
+  symbol     = '\\w+',
+  newline    = '\n',
+  whitespace = '\\s+'
+)
+```
+
+
+Tokenising the `obj`
+------------------------------------------------------------------------------
+
+Split the `obj` text data into tokens, but then remove anything that we don't need 
+to create the actual data structure representing the 3d object.
+
+```{r}
+tokens <- lex(octahedron_obj, obj_patterns)
+tokens <- tokens[!(names(tokens) %in% c('whitespace', 'newline', 'comment'))]
+tokens
+```
+
+
+
+
+Use a `TokenStream` to help turn the tokens into data
+------------------------------------------------------------------------------
+
+Initialise a `TokenStream` object to help us manipulate/interrogate the list of tokens we have.
+
+```{r}
+stream <- TokenStream$new(tokens)
+```
+
+
+
+Write a function to parse the lines which start with `f`
+------------------------------------------------------------------------------
+
+The lines which start with `f` encode a single triangular face. The numbers which
+follow the `f` are the indicies of the vertices which make up the face.
+
+To parse the lines which start with `f`: 
+
+* make sure the current token is `f`
+* keep consuming tokens as long as they are `numbers`
+* when we run out of numbers, we consider this object parsed and return the data, in this case a numeric vector.
+
+
+```{r}
+parse_f <- function() {
+  
+  # make sure the current token is `f`
+  stream$consume_token('symbol', 'f')
+  
+  # keep consuming tokens as long as they are `numbers`
+  values <- c()
+  while (identical(stream$current_type(), 'number')) {
+    values <- c(values, stream$consume_token())
+  }
+  
+  # when we run out of numbers, we consider this object parsed and 
+  # return the data, in this case a numeric vector.
+  as.numeric(values)
+}
+```
+
+
+
+Write function to parse the lines which start with `g`, `v` and `vn`
+------------------------------------------------------------------------------
+```{r}
+#-----------------------------------------------------------------------------
+# Parse the 'group name' specification
+#-----------------------------------------------------------------------------
+parse_g <- function() {
+  stream$consume_token('symbol', 'g')
+  stream$consume_token()
+}
+
+
+#-----------------------------------------------------------------------------
+# Parse the coordinates for a vertex. This may be 3 or 4 values, but 
+# i'm just ignoring the 4th, and keeping the (x, y, z) 
+#-----------------------------------------------------------------------------
+parse_v <- function() {
+  start_position <- stream$position
+  stream$consume_token('symbol', 'v')
+  values <- c()
+  while (identical(stream$current_type(), 'number')) {
+    values <- c(values, stream$consume_token())
+  }
+  if (length(values) == 4) {
+    values <- head(values, -1)
+  } else if (length(values) != 3) {
+    message <- glue("Expecting 3 or 4 values only for vertex, but got {length(values)} starting at position {start_position}")
+    stop(message)
+  }
+  as.numeric(values)
+}
+
+
+#-----------------------------------------------------------------------------
+# Parse the vector for that represents the normal at a vertex. 
+# This may be 3 or 4 values, but i'm just ignoring the 4th, and keeping the (x, y, z) 
+#-----------------------------------------------------------------------------
+parse_vn <- function() {
+  start_position <- stream$position
+  stream$consume_token('symbol', 'vn')
+  values <- c()
+  while (identical(stream$current_type(), 'number')) {
+    values <- c(values, stream$consume_token())
+  }
+  if (length(values) == 4) {
+    values <- head(values, -1)
+  } else if (length(values) != 3) {
+    message <- glue("Expecting 3 or 4 values only for vertex, but got {length(values)} starting at position {start_position}")
+    stop(message)
+  }
+  as.numeric(values)
+}
+```
+
+
+Write a top-level function containing a parse loop to keep extracting objects until we're done
+------------------------------------------------------------------------------
+
+* Check the current token
+* Call the parser for that token
+* Repeat
+
+```{r}
+parse_obj <- function() {
+  obj   <- list()  # This is where we'll hold the parsed data.
+  
+  while (!is.na(stream$current_value())) {
+    cv <- stream$current_value()
+    if (cv == 'g') {
+      parse_g()
+    } else if (cv == 'v') {
+      v <- parse_v()
+      obj$v <- rbind(obj$v, v)
+    } else if (cv == 'f') {
+      f <- parse_f()
+      obj$f <- rbind(obj$f, f)
+    } else if (cv == 'vn') {
+      vn <- parse_vn()
+      obj$vn <- rbind(obj$vn, vn)
+    } else {
+      message <- glue("Parse error at position {stream$position}. Not understood: {stream$current_value()}")
+      stop(message)
+    }
+  }
+  
+  obj
+}
+
+obj <- parse_obj()
+```
+
+The 3d object now exists as a list of data.frames (one for vertices and one for faces)
+
+```{r}
+obj
+```
+
+
+
+Post processing the data: Fortify/denormalise/tidy.
+------------------------------------------------------------------------------
+
+The text representation of the `obj` data is quite compact and avoids repetition
+but this isn't quite in the right form for us to manipulate in R.
+
+The following code turns this data into the `faces` data.frame which is slightly more
+useful as each face has an actual ID, and the x, y and z co-ordinates of its 3 vertices (a, b, c)
+are explicitly listed on each row i.e. we've created **a tidy data.frame** !
+
+```{r}
+#-----------------------------------------------------------------------------
+# Fortify/denormalise/tidy the `f` and `v` data into `faces`
+#-----------------------------------------------------------------------------
+create_faces <- function(obj) {
+  suppressWarnings({
+    faces <- data.frame(obj$f) %>%
+      set_names(c('a', 'b', 'c')) %>%
+      mutate(face_id = seq(n())) %>%
+      gather(idx, vert_id, -face_id) %>%
+      arrange(face_id, idx) %>%
+      as.tbl()
+    
+    verts <- data.frame(obj$v) %>%
+      set_names(c('x', 'y', 'z')) %>%
+      mutate(vert_id = seq(n())) %>%
+      as.tbl()
+  })
+  
+  faces %<>% left_join(verts, by='vert_id')
+  
+  faces
+}
+
+faces <- create_faces(obj)
+```
+
+```{r exho=FALSE}
+faces %>% knitr::kable(caption='tidy faces data.structure')
+```
+
+
+
+
+Let's view the object!
+------------------------------------------------------------------------------
+
+Use your mouse to rotate and zoom the object.
+
+```{r webgl=TRUE}
+view3d(theta = 10, phi=15)
+rgl::triangles3d(faces$x, faces$y, faces$z, col='grey')
+```
+
+
+
+
+

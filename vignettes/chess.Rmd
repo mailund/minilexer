@@ -1,0 +1,190 @@
+---
+title: "Parsing chess game files in PGN format"
+author: "mikefc"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r setup, include=FALSE}
+suppressPackageStartupMessages({
+  library(magrittr)
+  library(dplyr)
+  library(tidyr)
+  library(glue)
+  
+  library(minilexer)
+})
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+Chess game format: pgn
+------------------------------------------------------------------------------
+
+The [pgn file format](https://en.wikipedia.org/wiki/Portable_Game_Notation) is a human readable 
+representation of a chess game.
+
+In its most basic form, it consists of
+
+* a sequence of tags (i.e. comments)  surrounded by `[]` 
+* a sequence of numbers and events representing the moves taken by the players i.e.
+    * A number indicating which move this is within the game.
+    * Moves the for the white and black player represented in [Standard Algebraic Notation (SAN)](https://en.wikipedia.org/wiki/Algebraic_notation_(chess)).
+* Comments can be interspersed between/within the moves and are surrounded by "{}"
+
+An example `pgn` file is show below:
+
+```{r}
+pgn_text <- '
+[Event "F/S Return Match"]
+[Site "Belgrade, Serbia JUG"]
+[Date "1992.11.04"]
+[Round "29"]
+[White "Fischer, Robert J."]
+[Black "Spassky, Boris V."]
+[Result "1/2-1/2"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 {This opening is called the Ruy Lopez.}
+4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7
+11. c4 c6 12. cxb5 axb5 13. Nc3 Bb7 14. Bg5 b4 15. Nb1 h6 16. Bh4 c5 17. dxe5
+Nxe4 18. Bxe7 Qxe7 19. exd6 Qf6 20. Nbd2 Nxd6 21. Nc4 Nxc4 22. Bxc4 Nb6
+23. Ne5 Rae8 24. Bxf7+ Rxf7 25. Nxf7 Rxe1+ 26. Qxe1 Kxf7 27. Qe3 Qg5 28. Qxg5
+hxg5 29. b3 Ke6 30. a3 Kd6 31. axb4 cxb4 32. Ra5 Nd5 33. f3 Bc8 34. Kf2 Bf5
+35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5 40. Rd6 Kc5 41. Ra6
+Nf2 42. g4 Bd3 43. Re6 1/2-1/2
+'
+```
+
+Use `lex()` to turn the text into tokens
+------------------------------------------------------------------------------
+
+1. Start by defining the regular expression patterns for each element in the pgn file.
+2. Use `minilexer::lex()` to turn the *pgn* text into tokens
+3. Throw away whitespace, newlines and tags, since I'm not interested in them.
+
+```{r}
+pgn_patterns <- c(
+  comment       = '(;.*?)\n',     # Assume ; only appears to denote comment to end of line
+  tag           = '\\[.*?\\]',    # parse tags as a whole token. going to ignore
+  comment_open  = "\\{",          # Inline comment start
+  comment_close = "\\}",          # Inline comment end
+  move_number   = "\\d+\\.+",
+  symbol        = '[-+\\w\\./]+',
+  newline       = '\n',
+  whitespace    = '\\s+'
+)
+
+tokens <- minilexer::lex(pgn_text, pgn_patterns)
+tokens <- tokens[!(names(tokens) %in% c('whitespace', 'newline', 'tag'))]
+tokens[1:23]
+```
+
+
+Use a `TokenStream` to help turn the tokens into data
+------------------------------------------------------------------------------
+
+Initialise a `TokenStream` object to help us manipulate/interrogate the list of tokens we have.
+
+```{r}
+stream <- TokenStream$new(tokens)
+```
+
+
+Write a function to parse a comment
+------------------------------------------------------------------------------
+
+1. Check we are at the start of a comment i.e. a `comment_open` token
+2. Keep consuming symbols until we reach the end of the comment i.e. a `comment_close` token
+3. Collapse all the tokens that we collected into a single string, and return this as the comment.
+
+
+```{r}
+parse_comment <- function() {
+  stream$consume_token('comment_open')
+  values <- c()
+  while (!identical(stream$current_type(), 'comment_close')) {  # Also need to check for end of stream! TODO
+    values <- c(values, stream$consume_token())
+  }
+  stream$consume_token("comment_close")
+  paste(values, collapse=" ")
+}
+```
+
+
+Write a function to parse a set of 2 moves
+------------------------------------------------------------------------------
+
+A set of moves consists of:
+
+* A number indicating the move number within the game
+* Two strings representing move text - one for white and one for black
+
+Parsing method is as follows:
+
+1. Check that the token at the current stream position is a move number
+2. Keep consuming symbols until we reach a non-symbol
+3. Check that we got 2 moves. 
+4. Return a single row data.frame with the move number and the moves of white and black.
+
+```{r}
+parse_move <- function() {
+  move_number <- stream$consume_token('move_number')
+  values <- c()
+  while (identical(stream$current_type(), 'symbol')) {  # Also need to check for end of stream! TODO
+    values <- c(values, stream$consume_token())
+  }
+  if (length(values) != 2) {
+    message <- glue("Expecting 2 values only for moves, but got {length(values)} starting at position {start_position}")
+    stop(message)
+  }
+  data_frame(move=as.integer(readr::parse_number(move_number)), white=values[1], black=values[2])
+}
+```
+
+
+Write a top-level function containing a parse loop to keep extracting events until we're done
+------------------------------------------------------------------------------
+
+1. If the current token is a `move_number` then call `parse_move()`
+2. If the current token is a `comment` then call `parse_comment()`
+3. Repeat until done
+
+
+```{r}
+parse_pgn <- function() {
+  game <- NULL
+  
+  while (!is.na(stream$current_value())) {
+    ct <- stream$current_type()
+    if (identical(ct, 'move_number')) {
+      move <- parse_move()
+      game <- bind_rows(game, move)
+    } else if (identical(ct, 'comment_open')) {
+      comment <- parse_comment()
+    } else {
+      message <- glue("Parse error at position {state$position}. Not understood: {stream$current_value()}")
+      stop(message)
+    }
+  }
+  
+  game
+}
+
+game <- parse_pgn()
+```
+
+```{r echo=FALSE}
+knitr::kable(game, caption="Chess game represented as a data.frame")
+```
+
+
+
+
+
