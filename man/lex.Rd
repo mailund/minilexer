@@ -4,7 +4,7 @@
 \alias{lex}
 \title{Break a string into labelled tokens based upon a set of patterns}
 \usage{
-lex(text, patterns)
+lex(text, patterns, debug = FALSE)
 }
 \arguments{
 \item{text}{a single character string}
@@ -15,6 +15,8 @@ label for the token.  If the regex contains a captured group
 it will be left as is, otherwise the whole regex will be
 turned into a captured group. The patterns are used in order
 such that an early match takes precedence over any later match.}
+
+\item{debug}{print more debugging information about the matching. default: FALSE}
 }
 \value{
 a named character vector with the names representing the token type

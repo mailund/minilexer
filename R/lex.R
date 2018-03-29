@@ -11,6 +11,7 @@
 #'                 it will be left as is, otherwise the whole regex will be
 #'                 turned into a captured group. The patterns are used in order
 #'                 such that an early match takes precedence over any later match.
+#' @param debug print more debugging information about the matching. default: FALSE
 #'
 #' @return a named character vector with the names representing the token type
 #'         and the contents representing the tokens
@@ -21,7 +22,7 @@
 #' @importFrom stringr str_match_all
 #' @export
 #-----------------------------------------------------------------------------
-lex <- function(text, patterns) {
+lex <- function(text, patterns, debug=FALSE) {
 
   #---------------------------------------------------------------------------
   # Insert a default pattern to match anything missed by the provided patterns
@@ -48,6 +49,11 @@ lex <- function(text, patterns) {
   # Match all regex against the text
   #---------------------------------------------------------------------------
   token_matching  <- stringr::str_match_all(text, pattern)[[1]]
+
+  if (debug) {
+    colnames(token_matching) <- c("all", pattern_labels)
+    print(token_matching)
+  }
 
   #---------------------------------------------------------------------------
   # Extract the actual token and the pattern which matched the token

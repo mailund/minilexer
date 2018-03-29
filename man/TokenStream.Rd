@@ -3,13 +3,13 @@
 \docType{data}
 \name{TokenStream}
 \alias{TokenStream}
-\title{An R6 class for manipulating/interrogating a stream of tokens}
+\title{An R6 class for manipulating/interrogating a stream of tokens.}
 \format{\code{\link{R6Class}} object.}
 \usage{
 TokenStream
 }
 \description{
-An R6 class for manipulating/interrogating a stream of tokens
+An R6 class for manipulating/interrogating a stream of tokens.
 }
 \section{Usage}{
 
@@ -22,7 +22,7 @@ stream$current_value()
 
 \section{Arguments}{
 
-\code{tokens} The named character vector of tokens output by \code{lex()}
+\code{tokens} The named character vector of tokens output by \code{lex()}.
 }
 
 \section{Methods}{
