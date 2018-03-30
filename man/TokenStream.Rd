@@ -44,17 +44,24 @@ stream$current_value()
 
 \code{$expect_value(value)} Check that the token at the current position has the
       specified value. Silently return TRUE if it does, otherwise throw
-      an error.
+      an error. Value may be scalar or vector.
 
 \code{$expect_type(type)} Check that the token at the current position has the
       specified type. Silently return TRUE if it does, otherwise throw
-      an error.
+      an error. Type may be scalar or vector.
 
 
 \code{$consume_token{type=NULL, value=NULL}} Return the token at the current
      position and advance the stream to the next token. If \code{value} or
      \code{type} are specified, then \code{expect_value()} or \code{expect_type()}
-     are called to verify the token before returning.
+     are called to verify the token before returning.  Type and value may be scalar or vector.
+
+\code{$consume_tokens_of_type{type, n=Inf}} Consume 'n' tokens of the given type.
+     Consumption stops when 'n' is reached, or tokens are no longer of the
+     specified type - whichever comes first. n' may be a vector of values e.g. c(3, 4) and tokens will be
+     consumed until the maximum value is reached. The length of the returned
+     values is checked to be one of the specified 'n'.  n' defaults to 'Inf'.
+     Returns a vector of values of the consumed tokens. Type may be scale or vector.
 }
 
 \keyword{datasets}

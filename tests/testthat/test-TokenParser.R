@@ -1,5 +1,11 @@
-context("TokenParser")
 
+
+suppressPackageStartupMessages({
+  library(testthat)
+  library(minilexer)
+})
+
+context("TokenParser")
 
 R_patterns <- c(
   number      = "-?\\d*\\.?\\d+",
@@ -57,3 +63,80 @@ test_that("TokenParser works", {
   expect_equal(stream$current_value(), "<-")
   expect_equal(stream$current_type() , "assign")
 })
+
+
+test_that("consume_tokens_of_type() works 1", {
+  text <- "hello 1 2 3 4 5 goodbye now"
+  patterns <- c(
+    number      = "-?\\d*\\.?\\d+",
+    name        = "\\w+",
+    newline     = "\n",
+    whitespace  = "\\s+"
+  )
+  tokens <- lex(text, patterns)
+  tokens <- tokens[!(names(tokens) %in% c('whitespace', 'newline', 'comment'))]
+  stream <- TokenStream$new(tokens)
+  t1     <- stream$consume_tokens_of_type('name')    # grap all names. in this case, just 1
+  t2     <- stream$consume_tokens_of_type('number')  # grab all numbers until no more
+  t3     <- stream$consume_tokens_of_type('name')    # Should keep reading until the end of file
+
+  expect_equal(t1, 'hello')
+  expect_equal(t2, c('1', '2', '3', '4', '5'))
+  expect_equal(t3, c('goodbye', 'now'))
+
+  expect_true(stream$end_of_stream)
+})
+
+
+test_that("consume_tokens_of_type() works 2", {
+  text <- "hello 1 2 3 4 5 goodbye now"
+  patterns <- c(
+    number      = "-?\\d*\\.?\\d+",
+    name        = "\\w+",
+    newline     = "\n",
+    whitespace  = "\\s+"
+  )
+  tokens <- lex(text, patterns)
+  tokens <- tokens[!(names(tokens) %in% c('whitespace', 'newline', 'comment'))]
+  stream <- TokenStream$new(tokens)
+  t1     <- stream$consume_tokens_of_type('name')
+  t2     <- stream$consume_tokens_of_type('number', n=c(1, 3))
+
+  expect_equal(t1, 'hello')
+  expect_equal(t2, c('1', '2', '3'))
+
+  expect_true(stream$current_value() == '4')
+  expect_false(stream$end_of_stream)
+})
+
+
+test_that("consume_tokens_of_type() works 3", {
+  text <- "hello 1 2 3 XX 4 5 goodbye now 99"
+  patterns <- c(
+    breaker     = "XX",
+    number      = "-?\\d*\\.?\\d+",
+    name        = "\\w+",
+    newline     = "\n",
+    whitespace  = "\\s+"
+  )
+  tokens <- lex(text, patterns)
+  tokens <- tokens[!(names(tokens) %in% c('whitespace', 'newline', 'comment'))]
+  stream <- TokenStream$new(tokens)
+
+
+  t1     <- stream$consume_tokens_of_type(c('name', 'number'))
+  t2     <- stream$consume_token('breaker')
+  t3     <- stream$consume_tokens_of_type('number', n=1:3)
+  t4     <- stream$consume_tokens_of_type(c('name', 'number'))
+
+  expect_equal(t1, c('hello', '1', '2', '3'))
+  expect_equal(t2, 'XX')
+  expect_equal(t3, c('4', '5'))
+  expect_equal(t4, c('goodbye', 'now', '99'))
+
+  expect_true(is.na(stream$current_value()))
+  expect_true(stream$end_of_stream)
+})
+
+
+
