@@ -58,8 +58,8 @@ lex <- function(text, patterns, debug=FALSE) {
   #---------------------------------------------------------------------------
   # Extract the actual token and the pattern which matched the token
   #---------------------------------------------------------------------------
-  pattern_idx    <- apply(token_matching[, -1], 1, function(x) {  which(!is.na(x))})
-  tokens         <- apply(token_matching[, -1], 1, function(x) {x[which(!is.na(x))]})
+  pattern_idx    <- apply(token_matching[, -1, drop=FALSE], 1, function(x) {  which(!is.na(x))})
+  tokens         <- apply(token_matching[, -1, drop=FALSE], 1, function(x) {x[which(!is.na(x))]})
   names(tokens)  <- pattern_labels[pattern_idx]
 
 
@@ -101,7 +101,11 @@ pattern_ipaddress <- '(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-
 
 
 
-
+if (FALSE) {
+  text     <- 'xyz'
+  patterns <-  c(op = "\\bxyz\\b")
+  lex(text, patterns)
+}
 
 
 
