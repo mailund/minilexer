@@ -5,7 +5,7 @@ NEWS
 v0.1.6 2018-08-26
 ------------------
 
-* Removed `TokenStream`. Use `ministreamers::NamedValueStream` package instead.
+* Removed `TokenStream`. Use `ministreamer::NamedValueStream` package instead.
 
 v0.1.5 2018-08-12
 ------------------

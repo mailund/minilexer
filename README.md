@@ -12,6 +12,9 @@
 
 For complicated parsing (especially of computer programs) you'll want to use the more formally correct lexing/parsing provided by the [`rly` package](https://cran.r-project.org/package=rly) or the [`dparser` package](https://cran.r-project.org/package=dparser).
 
+Note: As of version 0.1.6, the `TokenStream` handler has been removed. Use `ministreamer::NamedValueStream` instead.
+
+
 Installation
 -----------------------------------------------------------------------------
 
