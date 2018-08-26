@@ -1,10 +1,10 @@
 Package: minilexer
 Type: Package
-Title: Simple Tools for Lexing and Parsing
-Version: 0.1.4
+Title: A Simple Tool for Lexing Text Data
+Version: 0.1.6
 Author: mikefc
 Maintainer: mikefc <coolbutuseless@gmail.com>
-Description: Some simple tools for lexing and parsing data.
+Description: A simple tool for lexing text data.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
