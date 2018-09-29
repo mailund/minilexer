@@ -25,6 +25,17 @@
 lex <- function(text, patterns, debug=FALSE) {
 
   #---------------------------------------------------------------------------
+  # disallow multiple capture groups in a single pattern.
+  # i.e. patterns = c("(a|b)", "(c)|(d)")
+  #---------------------------------------------------------------------------
+  captured_groups <- str_match_all(patterns, "\\([^?]")
+  n_captured_groups <- vapply(captured_groups, FUN = nrow, integer(1))
+  if (any(n_captured_groups > 1)) {
+    stop("Multiple captured groups in a single pattern are not allowed. Fix patterns: ", deparse(patterns[n_captured_groups > 1]))
+  }
+
+
+  #---------------------------------------------------------------------------
   # Insert a default pattern to match anything missed by the provided patterns
   #---------------------------------------------------------------------------
   patterns        <- c(patterns, .missing=".")
@@ -105,6 +116,15 @@ if (FALSE) {
   text     <- 'xyz'
   patterns <-  c(op = "\\bxyz\\b")
   lex(text, patterns)
+
+  # multicapture disallowed
+  patterns <- c('greg', "a(?=hello)", "(hello)", "(there)(there)")
+  text <- 'whatever'
+  lex(text, patterns)
+  captured_groups <- str_match_all(patterns, "\\([^?]")
+  n_captured_groups <- vapply(captured_groups, FUN = nrow, integer(1))
+  n_captured_groups
+
 }
 
 

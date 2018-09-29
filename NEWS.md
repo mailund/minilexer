@@ -1,6 +1,13 @@
 NEWS
 ============
 
+v0.1.7 2018-09-29
+------------------
+
+* Disallow multiple captured groups in a single pattern
+    * Because a single call to `string_match_all()` is used to perform the lex, 
+      multiple captured groups within a pattern won't work. Added a check to
+      explicitly disallow this sort of pattern.
 
 v0.1.6 2018-08-26
 ------------------
