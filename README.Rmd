@@ -1,6 +1,8 @@
+---
+output: github_document
+---
 
-*minilexer*: A Simple Lexer in R
-==============================================================================
+<!-- README.md is generated from README.Rmd. Please edit that file -->
 
 
 ```{r setup, include=FALSE}
@@ -11,19 +13,26 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+*minilexer*: A Simple Lexer in R
+-----------------------------------------------------------------------------
+
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/coolbutuseless/minilexer?branch=master&svg=true)](https://ci.appveyor.com/project/coolbutuseless/minilexer)
+[![Travis build status](https://travis-ci.org/coolbutuseless/minilexer.svg?branch=master)](https://travis-ci.org/coolbutuseless/minilexer)
+[![Coverage status](https://codecov.io/gh/coolbutuseless/minilexer/branch/master/graph/badge.svg)](https://codecov.io/github/coolbutuseless/minilexer?branch=master)
+
 `minilexer` provides a tool for simple tokenising/lexing of text files.  
 
 `minilexer` aims to be great at helping to get unsupported text data formats into R *fast*. 
 
 For complicated parsing (especially of computer programs) you'll want to use the more formally correct lexing/parsing provided by the [`rly` package](https://cran.r-project.org/package=rly) or the [`dparser` package](https://cran.r-project.org/package=dparser).
 
-Note: As of version 0.1.6, the `TokenStream` handler has been removed. Use `ministreamer::NamedValueStream` instead.
+Note: As of version 0.1.6, the `TokenStream` handler has been removed.
 
 
 Installation
 -----------------------------------------------------------------------------
 ```{r eval=FALSE}
-devtools::install_github('coolbutuseless/minilexer')
+remotes::install_github('coolbutuseless/minilexer')
 ```
 
 
@@ -53,26 +62,6 @@ suits 90% of my needs for turning data text formats into tokens.
 
 For complicated parsing (especially of computer programs) you'll probably want to use the more formally correct lexing/parsing provided by the [`rly` package](https://cran.r-project.org/package=rly) or the [`dparser` package](https://cran.r-project.org/package=dparser).
 
-
-
-Installation
------------------------------------------------------------------------------
-```{r eval=FALSE}
-devtools::install_github('coolbutuseless/minilexer')
-```
-
-
-
-Package Overview
------------------------------------------------------------------------------
-
-Current the package provides just one function: 
-
-* `minilexer::lex(text, patterns)` for splitting the text into tokens.
-    * This function uses the user-defined regular expressions (`patterns`) to split 
-      `text` into a character vector of tokens.
-    * The `patterns` argument is a named vector of character strings representing regular
-      expressions for elements to match within the text.  
 
 
 Example: Use `lex()` to split sentence into tokens

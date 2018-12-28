@@ -8,17 +8,19 @@ Description: A simple tool for lexing text data.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
 Imports:
   stringr,
   R6,
   glue
-Suggests: knitr,
+Suggests: 
+    knitr,
     rmarkdown,
     readr,
     dplyr,
     tidyr,
     magrittr,
     testthat,
-    rgl
+    rgl,
+    covr
 VignetteBuilder: knitr
