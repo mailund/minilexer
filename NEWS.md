@@ -1,17 +1,6 @@
 NEWS
 ============
 
-
-v0.1.6 2018-08-26
-------------------
-
-* Removed `TokenStream`. Use `ministreamers::NamedValueStream` package instead.
-
-v0.1.5 2018-08-12
-------------------
-
-* Added a hack for `consume_until_names()`. Not at all optimized.
-
 v0.1.4 2018-04-22
 ------------------
 

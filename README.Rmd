@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-`minilexer` provides a tool for simple tokenising/lexing of text files.  
+`minilexer` provides some tools for simple tokenising/lexing and parsing text files.  
 
 `minilexer` aims to be great at helping to get unsupported text data formats into R *fast*. 
 
@@ -20,7 +20,7 @@ For complicated parsing (especially of computer programs) you'll want to use the
 Installation
 -----------------------------------------------------------------------------
 ```{r eval=FALSE}
-devtools::install_github('coolbutuseless/minilexer')
+devtools::install_bitbucket('coolbutuseless/minilexer')
 ```
 
 
@@ -29,13 +29,15 @@ Package Overview
 -----------------------------------------------------------------------------
 
 
-Current the package provides one function:
+Current the package provides one function, and one R6 class: 
 
 * `minilexer::lex(text, patterns)` for splitting the text into tokens.
     * This function uses the user-defined regular expressions (`patterns`) to split 
       `text` into a character vector of tokens.
     * The `patterns` argument is a named vector of character strings representing regular
       expressions for elements to match within the text.  
+* `minilexer::TokenStream` is a class to handle manipulation/interrogation of the stream of tokens to
+  make it easier to write parsers.
 
 
 
@@ -43,7 +45,7 @@ Current the package provides one function:
 Introducing the `minilexer` package
 -----------------------------------------------------------------------------
 
-`minilexer` provides a tool for simple tokenising/lexing text files.
+`minilexer` provides some tools for simple tokenising/lexing and parsing text files.
 
 I will emphasise the **mini** in `minilexer` as this is not a rigorous or formally complete lexer, but it
 suits 90% of my needs for turning data text formats into tokens.
@@ -55,7 +57,7 @@ For complicated parsing (especially of computer programs) you'll probably want t
 Installation
 -----------------------------------------------------------------------------
 ```{r eval=FALSE}
-devtools::install_github('coolbutuseless/minilexer')
+devtools::install_bitbucket('coolbutuseless/minilexer')
 ```
 
 
@@ -63,13 +65,15 @@ devtools::install_github('coolbutuseless/minilexer')
 Package Overview
 -----------------------------------------------------------------------------
 
-Current the package provides just one function: 
+Current the package provides just one function and one R6 class: 
 
 * `minilexer::lex(text, patterns)` for splitting the text into tokens.
     * This function uses the user-defined regular expressions (`patterns`) to split 
       `text` into a character vector of tokens.
     * The `patterns` argument is a named vector of character strings representing regular
       expressions for elements to match within the text.  
+* `minilexer::TokenStream` is a class to handle manipulation/interrogation of the stream of tokens to
+  make it easier to write parsers.
 
 
 Example: Use `lex()` to split sentence into tokens
@@ -111,6 +115,56 @@ R_tokens <- lex(R_code, R_patterns)
 R_tokens
 ```
 
+
+Example: Use `TokenStream` to interrogate/manipulate the tokens 
+-----------------------------------------------------------------------------
+
+The `TokenStream` class is a way of manipulating a stream of tokens to make it 
+easier(*) to write parsers.  It is a way of keeping track of which token we are 
+currently looking at, and making assertions about the current token's value and type.
+
+In the following examples, I'll be using the `R_tokens` I extracted above.
+
+
+```{r error=TRUE}
+# create the stream to handle the tokens
+stream <- minilexer::TokenStream$new(R_tokens)
+
+# What position are we at?
+stream$position
+
+# Assert that the first token is a name and has the value 'x'
+stream$expect_value('x')
+stream$expect_type('name')
+
+# Show what happens if the current token isn't what we expect
+stream$expect_value('+')
+
+# Try and consume this token and move onto the next one, but
+# because the 'type' is incorrect, will result in failure
+stream$consume_token(type='number')
+
+# Unconditionally consume this token without regard to 
+# its value or type. This returns the value at the 
+# current position, and then increments the position
+stream$consume_token()
+
+# Stream position should have moved on to the second value
+stream$position
+
+# Get the current value, but without advancing the position
+stream$current_value()
+
+# consume it. i.e. return current value and increment position
+stream$consume_token(type='whitespace')
+
+# Stream position should have moved on to the third value
+stream$position
+
+# Get the current value
+stream$current_value()
+stream$current_type()
+```
 
 
 
