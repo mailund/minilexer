@@ -109,3 +109,28 @@ pattern_email     <- '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}'
 #-----------------------------------------------------------------------------
 pattern_ipaddress <- '(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
 
+
+
+
+if (FALSE) {
+  text     <- 'xyz'
+  patterns <-  c(op = "\\bxyz\\b")
+  lex(text, patterns)
+
+  # multicapture disallowed
+  patterns <- c('greg', "a(?=hello)", "(hello)", "(there)(there)")
+  text <- 'whatever'
+  lex(text, patterns)
+  captured_groups <- str_match_all(patterns, "\\([^?]")
+  n_captured_groups <- vapply(captured_groups, FUN = nrow, integer(1))
+  n_captured_groups
+
+}
+
+
+
+
+
+
+
+
